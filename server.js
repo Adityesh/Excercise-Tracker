@@ -1,11 +1,21 @@
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
+const dotenv = require('dotenv').config();
+const Users = require('./models/Users');
+const Excercise = require('./models/Excercise');
+const moment = require('moment');
 
 const cors = require('cors')
 
 const mongoose = require('mongoose')
-mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track' )
+mongoose.connect(process.env.DB_URI,{useNewUrlParser : true,useUnifiedTopology: true})
+
+
+
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {console.log("Connected")});
 
 app.use(cors())
 
@@ -17,6 +27,139 @@ app.use(express.static('public'))
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
+
+
+//Create a new user
+app.post('/api/exercise/new-user', async (req, res) => {
+  const username = req.body.username;
+  await Users.findOne({username : username},(err, document)=> {
+    if(document != null) {
+      res.status(201).json({
+        Error : "Username already exists",
+        Details : document
+      })
+    } else {
+      let User = new Users({
+        "username" : username
+      })
+      Users.create(User).then(doc => {
+        res.json({
+          username : doc.username,
+          _id : doc._id
+        })
+      })
+    }
+  })
+})
+
+
+//Get all users
+app.get('/api/exercise/users', async (req, res) => {
+  let users = await Users.find({})
+  res.json(users)
+})
+
+
+//Post an excercise to an username
+app.post('/api/exercise/add', async (req, res) => {
+  const {userId, description, duration, date} = req.body;
+  let date1;
+  if (date == null || date == undefined || date == "") {
+    date1= new Date()
+  } else if (date != null || date != undefined || date != "") {
+    date1 = new Date(date)
+  }
+  await Users.findOne({_id : userId}, (err, doc) => {
+    if(err) console.log(err);
+    if(doc != null) {
+      let excercise = new Excercise({
+        userId : doc._id,
+        username : doc.username,
+        description : description,
+        duration : duration,
+        date : date1
+      })
+
+      Excercise.create(excercise).then((doc) => {
+        res.status(201).json(doc);
+      })
+    } else {
+      res.status(404).json({
+        Error : "Given userId not found in the database"
+      })
+    }
+  })
+})
+
+//Get excercise log for an user
+app.get('/api/exercise/log' ,async (req, res) => {
+  let countNo = 0;
+  let username = '';
+  let arr = []
+  let {userId, from, to, limit} = req.query
+  await Excercise.countDocuments({userId : userId}, async (err, count) => {
+    countNo = count;
+  })
+  if(from == undefined && to == undefined && limit == undefined) {
+    await Excercise.find({userId : userId},async (err, docs) => {
+      username = docs[0].username;
+      arr = docs
+    })
+    let response = []
+    arr.forEach(i => {
+      response.push({
+        description : i.description,
+        duration : i.duration,
+        date : i.date
+      })
+      
+    })
+  
+    res.status(201).json({
+      username : username,
+      count : countNo,
+      Excercises : response
+    })
+  } else {
+    let arr = []
+    let user = ''
+    await Excercise.find({userId : userId},async (err, docs) => {
+      username = docs[0].username;
+      arr = docs
+    })
+
+    let response = []
+    arr.forEach(i => {
+      if(new Date(i.date) >= new Date(from) && new Date(i.date) <= new Date(to)) {
+      
+        response.push({
+          description : i.description,
+          duration : i.duration,
+          date : i.date
+        })
+        
+      }
+    })
+
+    // for(let i in arr) {
+    //   if(new Date(arr[i].date) >= new Date(from) && new Date(arr[i].date) <= new Date(to)) {
+      
+    //     console.log(arr[i].duration)
+        
+    //   }
+    // }
+
+    res.status(201).json({
+      username : username,
+      count : countNo,
+      Excercises : response
+    })
+
+  }
+  
+
+  
+})
 
 
 // Not found middleware
