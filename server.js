@@ -125,13 +125,35 @@ app.get('/api/exercise/log' ,async (req, res) => {
       count : countNo,
       log : response
     })
-  } else {
+  }else if(from == undefined && to == undefined && limit != undefined) {
+    await Excercise.find({userId : userId},async (err, docs) => {
+      username = docs[0].username;
+      arr = docs
+    }).limit(Number(limit))
+    let response = []
+    arr.forEach(i => {
+      response.push({
+        description : i.description,
+        duration : i.duration,
+        date : i.date
+      })
+      
+    })
+  
+    res.status(201).json({
+      _id : userId,
+      username : username,
+      count : countNo,
+      log : response
+    })
+  } 
+   else {
     let arr = []
     let user = ''
     await Excercise.find({userId : userId},async (err, docs) => {
       username = docs[0].username;
       arr = docs
-    })
+    }).limit(Number(limit))
 
     let response = []
     arr.forEach(i => {
