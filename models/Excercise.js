@@ -1,7 +1,9 @@
 const mongoose = require('mongoose')
 const shortid = require('shortid');
 
+
 const Excercises = new mongoose.Schema({
+
     userId : {
         type : String,
         required : true
@@ -10,7 +12,6 @@ const Excercises = new mongoose.Schema({
         type : String,
         required : true
     },
-    
     description : {
         type: String,
         required : true,
@@ -20,10 +21,16 @@ const Excercises = new mongoose.Schema({
         type : Number,
         required : true
     },
+    _id : {
+        type : String,
+        default : shortid.generate,
+        required : true
+    },
     date : {
         type : String,
         required : true
-    }
+    },
+    versionKey : false
     
 })
 

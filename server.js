@@ -34,10 +34,7 @@ app.post('/api/exercise/new-user', async (req, res) => {
   const username = req.body.username;
   await Users.findOne({username : username},(err, document)=> {
     if(document != null) {
-      res.status(201).json({
-        Error : "Username already exists",
-        Details : document
-      })
+      res.status(400).send("username already taken")
     } else {
       let User = new Users({
         "username" : username
@@ -65,9 +62,9 @@ app.post('/api/exercise/add', async (req, res) => {
   const {userId, description, duration, date} = req.body;
   let date1;
   if (date == null || date == undefined || date == "") {
-    date1= new Date()
+    date1= new Date().toDateString()
   } else if (date != null || date != undefined || date != "") {
-    date1 = new Date(date)
+    date1 = new Date(date).toDateString()
   }
   await Users.findOne({_id : userId}, (err, doc) => {
     if(err) console.log(err);
@@ -81,7 +78,14 @@ app.post('/api/exercise/add', async (req, res) => {
       })
 
       Excercise.create(excercise).then((doc) => {
-        res.status(201).json(doc);
+        let send = {
+          username : doc.username,
+          description : doc.description,
+          duration : doc.duration,
+          _id : userId,
+          date : doc.date
+        }
+        res.status(201).json(send);
       })
     } else {
       res.status(404).json({
@@ -116,9 +120,10 @@ app.get('/api/exercise/log' ,async (req, res) => {
     })
   
     res.status(201).json({
+      _id : userId,
       username : username,
       count : countNo,
-      Excercises : response
+      log : response
     })
   } else {
     let arr = []
@@ -141,18 +146,12 @@ app.get('/api/exercise/log' ,async (req, res) => {
       }
     })
 
-    // for(let i in arr) {
-    //   if(new Date(arr[i].date) >= new Date(from) && new Date(arr[i].date) <= new Date(to)) {
-      
-    //     console.log(arr[i].duration)
-        
-    //   }
-    // }
 
     res.status(201).json({
+      _id : userId,
       username : username,
       count : countNo,
-      Excercises : response
+      log : response
     })
 
   }
